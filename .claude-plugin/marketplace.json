@@ -1,0 +1,19 @@
+{
+  "name": "overleaf-resume-editor",
+  "description": "Resume tailoring tools for LaTeX and Overleaf.",
+  "owner": {
+    "name": "Sandra Huang"
+  },
+  "plugins": [
+    {
+      "name": "resume-optimizer",
+      "source": "./",
+      "description": "Tailor a LaTeX resume to a job description — reword bullets, hide irrelevant projects, restore relevant ones, reorder for emphasis. Includes a Chrome extension for editing directly in Overleaf.",
+      "author": {
+        "name": "Sandra Huang"
+      },
+      "category": "productivity",
+      "homepage": "https://github.com/sandera0606/overleaf-resume-editor"
+    }
+  ]
+}

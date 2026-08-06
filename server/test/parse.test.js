@@ -34,6 +34,40 @@ test('detects a fully commented-out block', () => {
   assert.strictEqual(kafka.commented, false);
 });
 
+test('each block is listed under exactly one section, once', () => {
+  const doc = parse(SRC);
+  const listed = doc.sections.flatMap((s) => s.blocks);
+
+  assert.strictEqual(listed.length, doc.blocks.length,
+    `sections list ${listed.length} block ids but there are ${doc.blocks.length} blocks`);
+  assert.strictEqual(new Set(listed).size, listed.length, 'a block id appears in section.blocks more than once');
+
+  for (const b of doc.blocks) {
+    const owners = doc.sections.filter((s) => s.blocks.includes(b.id));
+    assert.strictEqual(owners.length, 1, `block "${b.id}" is listed under ${owners.length} sections`);
+    assert.strictEqual(owners[0].name, b.section, `block "${b.id}" is filed under the wrong section`);
+  }
+});
+
+test('sections with duplicate names keep their own blocks', () => {
+  // Two \section{Projects} headings must not merge — the name-based lookup
+  // this replaced would file every block under the first one.
+  const src = [
+    '\\section{Projects}',
+    '\\resumeProjectHeading',
+    '  {\\textbf{Alpha}}{2021}',
+    '',
+    '\\section{Projects}',
+    '\\resumeProjectHeading',
+    '  {\\textbf{Beta}}{2022}',
+  ].join('\n');
+
+  const doc = parse(src);
+  const projectSections = doc.sections.filter((s) => s.name === 'Projects');
+  assert.strictEqual(projectSections.length, 2);
+  assert.deepStrictEqual(projectSections.map((s) => s.blocks), [['alpha'], ['beta']]);
+});
+
 test('block ranges do not overlap and stay inside the file', () => {
   const doc = parse(SRC);
   const sorted = [...doc.blocks].sort((a, b) => a.startLine - b.startLine);

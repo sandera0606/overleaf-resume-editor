@@ -110,6 +110,39 @@ archive/
   2026-08-06_acme-backend-engineer.meta.json  when, from which file, how many edits
 ```
 
+## Using it from the terminal (Claude Code plugin)
+
+The same engine ships as a Claude Code plugin, for when you'd rather not touch the browser. It works on local `.tex` files — no server, no extension, no Overleaf.
+
+```bash
+claude plugin marketplace add sandera0606/overleaf-resume-editor
+claude plugin install resume-optimizer@overleaf-resume-editor
+```
+
+Then:
+
+| | |
+|---|---|
+| `/tailor resume.tex jd.txt` | Tailor a resume to a job description |
+| `/resume-blocks resume.tex` | Show what's currently shown vs. hidden |
+
+Claude proposes the changes and shows them to you grouped by type before anything is written; you drop what you don't want.
+
+The plugin does the *judgment* — which experience fits the job, how to phrase it — while the same tested parser does the *mechanics*. It's told explicitly not to hand-edit the LaTeX, because commenting out a block by hand orphans its `\resumeItemListEnd` and breaks the build. That's a real bug this project already hit.
+
+### The CLI directly
+
+The plugin is a wrapper over `server/src/cli.js`, which is usable on its own:
+
+```bash
+node server/src/cli.js blocks  resume.tex [--json]
+node server/src/cli.js apply   resume.tex --suggestions sugg.json [--out FILE | --in-place] [--dry-run]
+node server/src/cli.js archive resume.tex --label "Acme — Backend" --jd jd.txt
+node server/src/cli.js list
+```
+
+`apply` writes nothing unless you pass `--out` or `--in-place` (which backs up to `.bak` first), and **exits 2 if any suggestion failed** — so `--dry-run` is a real preflight check, not just a preview.
+
 ## What it will and won't change
 
 Claude is instructed to **sharpen, never invent**. It will strengthen weak verbs (`worked on` → `built`) and surface detail already implied by your text. It will not add metrics, employers, dates, or technologies you haven't claimed.
@@ -133,7 +166,7 @@ Sentinel markers take priority over macro detection, so they're a reliable escap
 
 ## Safety properties
 
-These are the invariants the test suite enforces (`npm test`, 17 tests):
+These are the invariants the test suite enforces (`npm test`, 19 tests):
 
 - **Rewords are anchored to exact text, never line numbers.** If the anchor isn't found, that suggestion fails and reports why rather than writing to a guessed location.
 - **A failed suggestion never modifies the file.**
@@ -154,7 +187,7 @@ The server binds `127.0.0.1` only and requires a token on every route except `/h
 
 ```bash
 cd server
-npm test          # 17 tests, node:test, no framework
+npm test          # 19 tests, node:test, no framework
 ```
 
 The tests run against `server/test/fixtures/sample-resume.tex` and need neither the server nor Claude CLI running.
@@ -165,16 +198,28 @@ Server logs every analysis to stdout — suggestion count, elapsed time, cost, a
 
 ## Layout
 
+Three front ends over one engine — the parser and applier are shared, so a fix
+in `latex.js` lands in all of them.
+
 ```
 server/
   src/latex.js    block parser — the heart of it
   src/edits.js    suggestion application, phased and re-parsed between phases
-  src/claude.js   CLI invocation + prompt
+  src/claude.js   CLI invocation + prompt (used by the HTTP server)
   src/zip.js      minimal zip reader for Overleaf downloads
-  src/index.js    HTTP routes
-  test/           17 tests, no framework
-extension/
+  src/index.js    HTTP routes        <- front end 1: the extension
+  src/cli.js      command line       <- front end 2: the plugin, and you
+  test/           19 tests, no framework
+
+extension/        front end 1 — Overleaf, in the browser
   cm-bridge.js    MAIN-world CodeMirror access
   content.js      sidebar UI
   background.js   the only thing that talks to the server
+
+.claude-plugin/   front end 2 — Claude Code, in the terminal
+  plugin.json
+  marketplace.json
+skills/tailor-resume/SKILL.md    workflow, schema, and the never-invent rule
+commands/tailor.md               /tailor
+commands/resume-blocks.md        /resume-blocks
 ```

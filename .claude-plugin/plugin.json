@@ -1,0 +1,10 @@
+{
+  "name": "resume-optimizer",
+  "description": "Tailor a LaTeX resume to a job description: reword bullets, hide irrelevant projects and roles, restore relevant ones that were commented out, and reorder for emphasis. Edits go through a tested block parser that keeps LaTeX delimiters balanced, and every tailored resume is archived alongside the job description it was built for.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sandra Huang"
+  },
+  "homepage": "https://github.com/sandera0606/overleaf-resume-editor",
+  "keywords": ["resume", "latex", "overleaf", "job-search"]
+}

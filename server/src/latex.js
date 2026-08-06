@@ -215,10 +215,12 @@ function parse(source, options = {}) {
     i = end;
   }
 
+  // section.blocks is populated in pushBlock, against the resolved section
+  // object — not by name, which would misfile blocks if two sections share one.
   blocks.sort((a, b) => a.startLine - b.startLine);
-  for (const b of blocks) {
-    const s = sections.find((x) => x.name === b.section);
-    if (s) s.blocks.push(b.id);
+  for (const s of sections) {
+    s.blocks.sort((x, y) =>
+      blocks.findIndex((b) => b.id === x) - blocks.findIndex((b) => b.id === y));
   }
 
   return { lines, sections, blocks };
