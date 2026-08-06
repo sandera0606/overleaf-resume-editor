@@ -1,0 +1,246 @@
+/* Scoped hard to #resume-optimizer so Overleaf's stylesheet can't bleed in
+   and this can't leak out onto the editor. */
+
+#resume-optimizer,
+#resume-optimizer * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+#resume-optimizer {
+  --ro-bg: #ffffff;
+  --ro-fg: #1c2024;
+  --ro-muted: #6b7280;
+  --ro-line: #e3e6ea;
+  --ro-accent: #2f6f4e;
+  --ro-accent-fg: #ffffff;
+  --ro-warn: #9a6b00;
+  --ro-err: #b3261e;
+  --ro-add: #e7f4ec;
+  --ro-del: #fdecea;
+
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  max-width: 92vw;
+  height: 100vh;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  background: var(--ro-bg);
+  color: var(--ro-fg);
+  border-left: 1px solid var(--ro-line);
+  box-shadow: -2px 0 16px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  transform: translateX(100%);
+  transition: transform 0.18s ease;
+}
+
+#resume-optimizer.ro-open { transform: translateX(0); }
+
+@media (prefers-color-scheme: dark) {
+  #resume-optimizer {
+    --ro-bg: #1b1d1f;
+    --ro-fg: #e8eaed;
+    --ro-muted: #9aa0a6;
+    --ro-line: #33363a;
+    --ro-accent: #4b9e73;
+    --ro-add: #17301f;
+    --ro-del: #331b19;
+    --ro-warn: #d9a441;
+    --ro-err: #f2857c;
+  }
+}
+
+/* ---------------------------------------------------------------- chrome -- */
+
+#resume-optimizer .ro-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ro-line);
+  flex: 0 0 auto;
+}
+
+#resume-optimizer .ro-title { font-weight: 600; font-size: 14px; }
+
+#resume-optimizer .ro-close {
+  background: none;
+  border: none;
+  color: var(--ro-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+#resume-optimizer .ro-close:hover { color: var(--ro-fg); }
+
+#resume-optimizer .ro-status {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--ro-muted);
+  border-bottom: 1px solid var(--ro-line);
+  flex: 0 0 auto;
+  word-break: break-word;
+}
+#resume-optimizer .ro-ok   { color: var(--ro-accent); }
+#resume-optimizer .ro-warn { color: var(--ro-warn); }
+#resume-optimizer .ro-err  { color: var(--ro-err); }
+
+#resume-optimizer .ro-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+#resume-optimizer .ro-step { margin-bottom: 18px; }
+#resume-optimizer .ro-hint { color: var(--ro-muted); margin-bottom: 10px; }
+
+/* ----------------------------------------------------------------- forms -- */
+
+#resume-optimizer .ro-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ro-muted);
+  margin: 10px 0 5px;
+  font-weight: 600;
+}
+
+#resume-optimizer .ro-input,
+#resume-optimizer .ro-select,
+#resume-optimizer .ro-textarea {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--ro-line);
+  border-radius: 5px;
+  background: var(--ro-bg);
+  color: var(--ro-fg);
+  font-size: 13px;
+}
+
+#resume-optimizer .ro-textarea {
+  resize: vertical;
+  min-height: 110px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+}
+
+#resume-optimizer .ro-input:focus,
+#resume-optimizer .ro-select:focus,
+#resume-optimizer .ro-textarea:focus {
+  outline: 2px solid var(--ro-accent);
+  outline-offset: -1px;
+}
+
+#resume-optimizer .ro-btn {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 5px;
+  border: 1px solid var(--ro-line);
+  background: transparent;
+  color: var(--ro-fg);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+#resume-optimizer .ro-btn:hover:not(:disabled) { border-color: var(--ro-accent); }
+#resume-optimizer .ro-btn:disabled { opacity: 0.5; cursor: progress; }
+
+#resume-optimizer .ro-primary {
+  width: 100%;
+  background: var(--ro-accent);
+  border-color: var(--ro-accent);
+  color: var(--ro-accent-fg);
+}
+
+#resume-optimizer .ro-ghost { margin-right: 6px; padding: 5px 10px; font-size: 12px; }
+
+#resume-optimizer .ro-actions { display: flex; align-items: center; margin-top: 6px; }
+
+/* ----------------------------------------------------------- suggestions -- */
+
+#resume-optimizer .ro-summary {
+  background: color-mix(in srgb, var(--ro-accent) 8%, transparent);
+  border-left: 3px solid var(--ro-accent);
+  padding: 9px 11px;
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 12px;
+}
+
+#resume-optimizer .ro-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+#resume-optimizer .ro-chip {
+  background: var(--ro-line);
+  color: var(--ro-fg);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+#resume-optimizer .ro-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+#resume-optimizer .ro-sugg {
+  display: flex;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--ro-line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+#resume-optimizer .ro-sugg:hover { border-color: var(--ro-accent); }
+#resume-optimizer .ro-sugg-main { flex: 1 1 auto; min-width: 0; }
+#resume-optimizer .ro-check { margin-top: 3px; flex: 0 0 auto; accent-color: var(--ro-accent); }
+
+#resume-optimizer .ro-sugg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+#resume-optimizer .ro-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--ro-line);
+}
+#resume-optimizer .ro-badge-reword          { background: #dbeafe; color: #1e40af; }
+#resume-optimizer .ro-badge-block_comment   { background: var(--ro-del); color: var(--ro-err); }
+#resume-optimizer .ro-badge-block_uncomment { background: var(--ro-add); color: var(--ro-accent); }
+#resume-optimizer .ro-badge-block_move      { background: #fef3c7; color: #92400e; }
+
+#resume-optimizer .ro-conf { font-size: 11px; color: var(--ro-muted); }
+
+#resume-optimizer .ro-before,
+#resume-optimizer .ro-after,
+#resume-optimizer .ro-target {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+  padding: 5px 7px;
+  border-radius: 3px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+#resume-optimizer .ro-before { background: var(--ro-del); text-decoration: line-through; opacity: 0.75; }
+#resume-optimizer .ro-after  { background: var(--ro-add); margin-top: 3px; }
+#resume-optimizer .ro-target { background: var(--ro-line); }
+
+#resume-optimizer .ro-why { margin-top: 6px; color: var(--ro-muted); font-size: 12px; }
+
+#resume-optimizer .ro-failed {
+  background: var(--ro-del);
+  border: 1px solid var(--ro-err);
+  border-radius: 5px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+#resume-optimizer .ro-failed-row { font-size: 11.5px; color: var(--ro-err); }

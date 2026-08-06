@@ -1,0 +1,20 @@
+{
+  "_comment": "Copy to config.json, or just run the server once and it generates one. A token is minted automatically on first run.",
+
+  "port": 8787,
+
+  "archiveDir": "../archive",
+
+  "model": null,
+
+  "pairWindowMinutes": 5,
+
+  "_headingMacros": "Optional. Override only if your template uses macros the parser does not know. Defaults to the list below.",
+  "headingMacros": [
+    "resumeSubheading",
+    "resumeProjectHeading",
+    "resumeSubItem",
+    "cventry",
+    "cvitem"
+  ]
+}
