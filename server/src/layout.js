@@ -50,6 +50,31 @@ function toPt(value, fontSize = 11) {
   }
 }
 
+/**
+ * Total the `\vspace` inside each macro definition.
+ *
+ * Jake-style templates are compact almost entirely through negative vspace —
+ * `\resumeSubheading` alone claws back 11pt every time it is used. Ignoring
+ * that overestimated a real one-page resume by ~50%, which would have made the
+ * selector throw away most of the document to "fit". These values are the
+ * template's own compression, so read them rather than guess a fudge factor.
+ *
+ * @returns {Object<string, number>} macro name -> points added (usually negative)
+ */
+function readMacroSpacing(source) {
+  const out = {};
+  let current = null;
+  for (const line of String(source).split('\n')) {
+    const def = line.match(/\\(?:re)?newcommand\{?\\(\w+)/);
+    if (def) current = def[1];
+    if (!current) continue;
+    for (const m of line.matchAll(/\\vspace\*?\{(-?[\d.]+\s*[a-z]*)\}/g)) {
+      out[current] = (out[current] || 0) + toPt(m[1]);
+    }
+  }
+  return out;
+}
+
 /** Read page geometry out of the preamble plus any style file. */
 function readGeometry(tex, sty = '') {
   const all = `${tex}\n${sty}`;
@@ -70,7 +95,14 @@ function readGeometry(tex, sty = '') {
     else textHeight = v;
   }
 
-  return { fontSize, textWidth, textHeight, baseline: base.baseline };
+  return {
+    fontSize,
+    textWidth,
+    textHeight,
+    baseline: base.baseline,
+    // Macros may be defined in a .sty or inline in the .tex (stock Jake's).
+    spacing: readMacroSpacing(all),
+  };
 }
 
 /**
@@ -144,6 +176,7 @@ function estimate(tex, sty = '', opts = {}) {
 function measure(tex, geo, opts = {}) {
   const charRatio = opts.charWidthRatio || DEFAULT_CHAR_WIDTH_RATIO;
   const { textWidth, baseline, fontSize } = geo;
+  const spacing = geo.spacing || {};
 
   // Indent inside itemize environments narrows the usable measure.
   const itemIndent = 15;
@@ -158,18 +191,20 @@ function measure(tex, geo, opts = {}) {
 
     const section = line.match(/\\section\{([^}]*)\}/);
     if (section) {
-      // Rule + label + surrounding skip.
-      height += baseline * 2.2;
+      // Compact titleformat: label, rule, and the small skip around them.
+      height += baseline * 1.35 + (spacing.section || 0);
       current = { name: section[1], height: 0 };
       sections.push(current);
       continue;
     }
 
+    const macro = (line.match(/\\(resume[A-Za-z]*)/) || [])[1];
     const isHeading = /\\resume(SubHeading|Subheading|ProjectHeading|SubItem)/.test(line);
     const isItem = /\\resumeItem\b/.test(line);
+
     if (!isHeading && !isItem) {
-      // Structural macros (List starts/ends) carry small fixed skips.
-      if (/\\resume\w*List(Start|End)/.test(line)) height += baseline * 0.25;
+      // Structural macros contribute only their own spacing (often negative).
+      if (macro) height += spacing[macro] || 0;
       continue;
     }
 
@@ -177,7 +212,14 @@ function measure(tex, geo, opts = {}) {
     const width = isItem ? textWidth - itemIndent * 2 : textWidth - itemIndent;
     const size = isItem ? fontSize * SMALL_RATIO : fontSize;
     const lines = wrappedLines(text, width, size, charRatio);
-    const block = lines * baseline * (isItem ? SMALL_RATIO : 1) + (isHeading ? baseline * 0.5 : 0);
+
+    // Only the four-argument headings render a second row (title/date, then
+    // org/location). \resumeProjectHeading and \resumeSubItem are single-row —
+    // charging every heading for two rows overestimated a project-heavy resume
+    // by about three inches.
+    const twoRow = /\\resume(SubHeading|Subheading|SubSubheading)\b/.test(line);
+    const rows = lines + (twoRow ? 1 : 0);
+    const block = rows * baseline * (isItem ? SMALL_RATIO : 1) + (spacing[macro] || 0);
 
     height += block;
     if (current) current.height += block;
@@ -188,5 +230,5 @@ function measure(tex, geo, opts = {}) {
 
 module.exports = {
   estimate, measure, readGeometry, visibleText, wrappedLines, toPt,
-  PT_PER_INCH, DEFAULT_CHAR_WIDTH_RATIO,
+  PT_PER_INCH, DEFAULT_CHAR_WIDTH_RATIO, readMacroSpacing,
 };
