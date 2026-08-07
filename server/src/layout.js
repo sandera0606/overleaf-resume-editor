@@ -177,28 +177,51 @@ function measure(tex, geo, opts = {}) {
   const charRatio = opts.charWidthRatio || DEFAULT_CHAR_WIDTH_RATIO;
   const { textWidth, baseline, fontSize } = geo;
   const spacing = geo.spacing || {};
-
-  // Indent inside itemize environments narrows the usable measure.
   const itemIndent = 15;
+
+  // Nothing before \begin{document} is typeset.
+  const marker = '\\begin{document}';
+  const at = tex.indexOf(marker);
+  const body = at === -1 ? tex : tex.slice(at + marker.length);
 
   let height = 0;
   const sections = [];
   let current = null;
-  // Continuation lines carry no macro, so item context has to be remembered.
   let isItemContext = false;
 
-  // Nothing before \begin{document} is typeset. Without this, \documentclass
-  // and \usepackage lines are measured as if they were prose.
-  const bodyStart = tex.indexOf('\\begin{document}');
-  const body = bodyStart === -1 ? tex : tex.slice(bodyStart + '\\begin{document}'.length);
+  // TeX wraps PARAGRAPHS, not source lines. A contact header or a heading
+  // spread across several source lines renders as one wrapped run, so
+  // measuring each line separately multiplied the fixed overhead — enough
+  // that chrome alone could exceed the page budget, leaving nothing for the
+  // blocks and dropping every one of them as "not fitting".
+  let pending = '';
+  let pendingSmall = false;
+
+  const flush = () => {
+    if (!pending) return;
+    const width = textWidth - itemIndent * (pendingSmall ? 2 : 1);
+    const size = pendingSmall ? fontSize * SMALL_RATIO : fontSize;
+    const h = wrappedLines(pending, width, size, charRatio)
+      * baseline * (pendingSmall ? SMALL_RATIO : 1);
+    height += h;
+    if (current) current.height += h;
+    pending = '';
+  };
 
   for (const raw of body.split('\n')) {
     const line = raw.trim();
-    if (!line || line.startsWith('%')) continue; // commented-out = not typeset
+
+    if (!line) { flush(); continue; }       // a blank line ends a paragraph
+    if (line.startsWith('%')) continue;     // commented-out = not typeset
+
+    if (/\\resumeItemListStart\b/.test(line)) isItemContext = true;
+    if (/\\resumeItemListEnd\b/.test(line)) isItemContext = false;
+
+    // Anything that begins a new visual run closes the previous one.
+    if (/\\(section|resume[A-Za-z]*|item|begin|end)\b|\\\\/.test(line)) flush();
 
     const section = line.match(/\\section\{([^}]*)\}/);
     if (section) {
-      // Compact titleformat: label, rule, and the small skip around them.
       height += baseline * 1.35 + (spacing.section || 0);
       current = { name: section[1], height: 0 };
       sections.push(current);
@@ -206,29 +229,19 @@ function measure(tex, geo, opts = {}) {
     }
 
     const macro = (line.match(/\\(resume[A-Za-z]*)/) || [])[1];
-    // Any macro's declared spacing applies, whether or not the line carries text.
-    let block = macro ? (spacing[macro] || 0) : 0;
-
-    // Measure every line that renders text, not just ones with a known macro.
-    // These templates put a heading's arguments on continuation lines:
-    //
-    //     \resumeProjectHeading                 <- macro, no visible text
-    //       {\textbf{Kafka Pipeline}}{2023}     <- the text that actually renders
-    //
-    // Counting only macro lines charged headings ~nothing, which let a
-    // multi-page resume estimate under one page and pass through untrimmed.
-    const text = visibleText(line);
-    if (text) {
-      // \resumeItem bodies are set in \small and indented one level deeper.
-      const small = isItemContext || /\\resumeItem\b/.test(line);
-      const width = textWidth - itemIndent * (small ? 2 : 1);
-      const size = small ? fontSize * SMALL_RATIO : fontSize;
-      block += wrappedLines(text, width, size, charRatio) * baseline * (small ? SMALL_RATIO : 1);
+    if (macro) {
+      const s = spacing[macro] || 0;
+      height += s;
+      if (current) current.height += s;
     }
 
-    height += block;
-    if (current) current.height += block;
+    const text = visibleText(line);
+    if (text) {
+      pendingSmall = isItemContext || /\\resumeItem\b/.test(line);
+      pending = pending ? (pending + ' ' + text) : text;
+    }
   }
+  flush();
 
   return { height, sections };
 }
