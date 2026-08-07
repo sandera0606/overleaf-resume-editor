@@ -63,6 +63,7 @@ const actions = {
     return { connected: !!token, ...health };
   },
   project: (p) => call('/project', { method: 'POST', body: p }),
+  jd: (p) => call('/jd', { method: 'POST', body: p }),
   blocks: (p) => call('/blocks', { method: 'POST', body: p }),
   analyze: (p) => call('/analyze', { method: 'POST', body: p }),
   apply: (p) => call('/apply', { method: 'POST', body: p }),

@@ -5,7 +5,21 @@
 
   "archiveDir": "../archive",
 
+  "_provider": "Which engine runs the analysis: cli | anthropic | openai | gemini. 'cli' shells out to the Claude CLI and needs no key of its own.",
+  "provider": "cli",
+
+  "_model": "null uses the provider's default (claude-opus-5 / gpt-4o / gemini-2.5-pro).",
   "model": null,
+
+  "_apiKeys": "Only needed for the API providers. The matching environment variable (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY) always wins, so you can leave this empty and export the key instead. Keys are read by the server only and never reach the browser; this file is written mode 0600.",
+  "apiKeys": {
+    "anthropic": "",
+    "openai": "",
+    "gemini": ""
+  },
+
+  "_timeoutMs": "Ceiling on one analysis call.",
+  "timeoutMs": 180000,
 
   "pairWindowMinutes": 5,
 

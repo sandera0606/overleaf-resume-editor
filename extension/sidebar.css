@@ -42,6 +42,28 @@
 
 #resume-optimizer.ro-open { transform: translateX(0); }
 
+/* ------------------------------------------------- squish, don't overlap -- */
+/* Overleaf's whole app lives in <main id="ide-root">, and <html> is
+   position:fixed — so narrowing the app root is what actually reflows the
+   editor and PDF panes. Narrowing html/body does nothing.
+   Only applies on viewports with room to spare; below that the panel overlays
+   rather than crushing the editor into a column. */
+
+@media (min-width: 900px) {
+  body.ro-shifted > #ide-root,
+  body.ro-shifted > main {
+    width: calc(100% - 420px) !important;
+    max-width: calc(100% - 420px) !important;
+    transition: width 0.18s ease;
+  }
+  body.ro-shifted { overflow-x: hidden !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ro-shifted > #ide-root,
+  body.ro-shifted > main { transition: none; }
+}
+
 @media (prefers-color-scheme: dark) {
   #resume-optimizer {
     --ro-bg: #1b1d1f;
@@ -91,6 +113,43 @@
 #resume-optimizer .ro-ok   { color: var(--ro-accent); }
 #resume-optimizer .ro-warn { color: var(--ro-warn); }
 #resume-optimizer .ro-err  { color: var(--ro-err); }
+
+/* -------------------------------------------------------------- progress -- */
+
+#resume-optimizer .ro-progress {
+  display: none;
+  padding: 9px 14px 10px;
+  border-bottom: 1px solid var(--ro-line);
+  flex: 0 0 auto;
+}
+#resume-optimizer .ro-progress.ro-progress-on { display: block; }
+
+#resume-optimizer .ro-progress-track {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ro-line);
+  overflow: hidden;
+}
+
+#resume-optimizer .ro-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: var(--ro-accent);
+  transition: width 0.25s ease;
+}
+
+#resume-optimizer .ro-progress-label {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--ro-muted);
+}
+
+#resume-optimizer .ro-progress-fail .ro-progress-fill { background: var(--ro-err); }
+
+@media (prefers-reduced-motion: reduce) {
+  #resume-optimizer .ro-progress-fill { transition: none; }
+}
 
 #resume-optimizer .ro-body {
   flex: 1 1 auto;
@@ -164,6 +223,44 @@
 
 #resume-optimizer .ro-actions { display: flex; align-items: center; margin-top: 6px; }
 
+/* --------------------------------------------------------- source + job -- */
+
+#resume-optimizer .ro-row { display: flex; gap: 6px; align-items: flex-start; }
+#resume-optimizer .ro-row .ro-input { flex: 1 1 auto; min-width: 0; }
+#resume-optimizer .ro-row .ro-btn { margin-top: 0; flex: 0 0 auto; }
+
+#resume-optimizer .ro-source {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--ro-accent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--ro-accent) 8%, transparent);
+}
+#resume-optimizer .ro-source-name {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-weight: 600;
+}
+#resume-optimizer .ro-source-meta { font-size: 11.5px; color: var(--ro-muted); }
+
+#resume-optimizer .ro-callout {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--ro-warn);
+  background: color-mix(in srgb, var(--ro-warn) 10%, transparent);
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+}
+
+#resume-optimizer .ro-preview {
+  margin-top: 6px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--ro-accent);
+  word-break: break-all;
+}
+
 /* ----------------------------------------------------------- suggestions -- */
 
 #resume-optimizer .ro-summary {
@@ -236,6 +333,142 @@
 
 #resume-optimizer .ro-why { margin-top: 6px; color: var(--ro-muted); font-size: 12px; }
 
+/* ------------------------------------------------------------- review -- */
+
+#resume-optimizer .ro-created {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-weight: 600;
+  color: var(--ro-accent);
+  word-break: break-all;
+}
+#resume-optimizer .ro-sub { font-size: 12px; color: var(--ro-muted); margin-top: 2px; }
+
+/* One suggestion at a time, stepped through with < > */
+
+#resume-optimizer .ro-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#resume-optimizer .ro-nav-btn {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--ro-line);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ro-fg);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+}
+#resume-optimizer .ro-nav-btn:hover { border-color: var(--ro-accent); color: var(--ro-accent); }
+
+#resume-optimizer .ro-nav-mid { flex: 1 1 auto; text-align: center; }
+#resume-optimizer .ro-nav-count { font-weight: 600; font-size: 13px; }
+#resume-optimizer .ro-nav-sub { font-size: 11px; color: var(--ro-muted); }
+
+#resume-optimizer .ro-card {
+  padding: 10px;
+  border: 1px solid var(--ro-line);
+  border-left-width: 3px;
+  border-radius: 6px;
+}
+#resume-optimizer .ro-card-pending  { border-left-color: var(--ro-accent); }
+#resume-optimizer .ro-card-accepted { border-left-color: var(--ro-accent); opacity: 0.75; }
+#resume-optimizer .ro-card-rejected { border-left-color: var(--ro-muted); opacity: 0.6; }
+#resume-optimizer .ro-card-missing  { border-left-color: var(--ro-err); }
+
+#resume-optimizer .ro-rw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--ro-muted);
+}
+#resume-optimizer .ro-card-state { text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+#resume-optimizer .ro-card-accepted .ro-card-state { color: var(--ro-accent); }
+#resume-optimizer .ro-card-missing .ro-card-state { color: var(--ro-err); }
+
+#resume-optimizer .ro-decide { display: flex; gap: 8px; margin-top: 10px; }
+#resume-optimizer .ro-decide .ro-btn { flex: 1 1 0; margin-top: 0; }
+#resume-optimizer .ro-decide-yes { background: var(--ro-accent); border-color: var(--ro-accent); color: var(--ro-accent-fg); }
+#resume-optimizer .ro-decide-no { background: transparent; }
+#resume-optimizer .ro-decide .ro-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ------------------------------- floating accept/reject over the editor -- */
+/* Lives outside the panel, so it carries its own colours. */
+
+#resume-optimizer-float {
+  position: fixed;
+  z-index: 2147483001;
+  display: none;
+  max-width: 360px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #1c2024;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+#resume-optimizer-float.ro-float-on { display: block; }
+
+#resume-optimizer-float .ro-float-new {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+  background: #e7f4ec;
+  border-radius: 3px;
+  padding: 5px 7px;
+  margin-bottom: 7px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+#resume-optimizer-float .ro-float-bar { display: flex; align-items: center; gap: 6px; }
+#resume-optimizer-float .ro-float-count { font-size: 11px; color: #78716c; min-width: 40px; text-align: center; }
+
+#resume-optimizer-float .ro-float-nav {
+  border: 1px solid #d6d3d1;
+  background: #fff;
+  color: #57534e;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+#resume-optimizer-float .ro-float-nav:last-of-type { margin-right: auto; }
+#resume-optimizer-float .ro-float-nav:hover { border-color: #f59e0b; color: #b45309; }
+
+#resume-optimizer-float .ro-float-btn {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#resume-optimizer-float .ro-float-yes { background: #2f6f4e; color: #fff; }
+#resume-optimizer-float .ro-float-no { background: #fff; color: #57534e; border-color: #d6d3d1; }
+#resume-optimizer-float .ro-float-btn:hover { filter: brightness(1.08); }
+
+@media (prefers-color-scheme: dark) {
+  #resume-optimizer-float { background: #2a2519; border-color: #b45309; color: #e8eaed; }
+  #resume-optimizer-float .ro-float-new { background: #17301f; }
+  #resume-optimizer-float .ro-float-count { color: #a8a29e; }
+  #resume-optimizer-float .ro-float-no { background: #1b1d1f; color: #d6d3d1; border-color: #44403c; }
+}
+
 #resume-optimizer .ro-failed {
   background: var(--ro-del);
   border: 1px solid var(--ro-err);
@@ -244,3 +477,27 @@
   margin-bottom: 8px;
 }
 #resume-optimizer .ro-failed-row { font-size: 11.5px; color: var(--ro-err); }
+
+/* A source that was inferred rather than found by name reads as provisional. */
+#resume-optimizer .ro-source-guess {
+  border-color: var(--ro-warn);
+  background: color-mix(in srgb, var(--ro-warn) 8%, transparent);
+}
+
+/* --------------------------------------------------------- page budget -- */
+
+#resume-optimizer .ro-fit { margin: 8px 0 4px; }
+
+#resume-optimizer .ro-fit-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ro-line);
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+#resume-optimizer .ro-fit-fill {
+  height: 100%;
+  background: var(--ro-accent);
+  border-radius: 3px;
+}
+#resume-optimizer .ro-fit-note { font-style: italic; opacity: 0.8; }

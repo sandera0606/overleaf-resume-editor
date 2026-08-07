@@ -12,7 +12,11 @@ const { load } = require('./config');
 const { readTexFiles } = require('./zip');
 const { parse } = require('./latex');
 const { applySuggestions } = require('./edits');
+const { pickSource } = require('./pick');
+const { selectToFit, planToSuggestions } = require('./select');
 const { analyze } = require('./claude');
+const providers = require('./providers');
+const { fetchJobDescription } = require('./jd');
 const archive = require('./archive');
 
 const config = load();
@@ -72,7 +76,8 @@ const routes = {
     ok: true,
     service: 'resume-optimizer',
     archiveDir: config.archiveDir,
-    model: config.model || '(CLI default)',
+    // describe() never includes the key itself, only where it was found.
+    engine: providers.describe(config),
   }),
 
   'GET /pair': async () => {
@@ -89,7 +94,19 @@ const routes = {
     if (!body.zipBase64) throw Object.assign(new Error('Missing zipBase64.'), { status: 400 });
     const files = readTexFiles(Buffer.from(body.zipBase64, 'base64'));
     if (!files.length) throw Object.assign(new Error('No .tex files found in that project.'), { status: 422 });
-    return { files: files.map(describe), sources: Object.fromEntries(files.map((f) => [f.name, f.source])) };
+
+    const described = files.map(describe);
+    // Which file to tailor from, and why — the panel shows the reason so an
+    // unconventional project doesn't look like it was picked at random.
+    const { suggested, candidates, reason } = pickSource(described);
+
+    return {
+      files: described,
+      suggested,
+      suggestedReason: reason,
+      candidates: candidates.map((c) => c.name),
+      sources: Object.fromEntries(files.map((f) => [f.name, f.source])),
+    };
   },
 
   // Body: { source, filename } -> parsed block inventory for one file.
@@ -97,6 +114,18 @@ const routes = {
     if (typeof body.source !== 'string') throw Object.assign(new Error('Missing source.'), { status: 400 });
     const doc = parse(body.source);
     return { blocks: doc.blocks, sections: doc.sections };
+  },
+
+  // Body: { url } -> the posting as plain text, or a reason it couldn't be read.
+  // The fetch happens here rather than in the extension so the browser needs no
+  // host permission beyond overleaf.com.
+  'POST /jd': async (body) => {
+    if (!body.url || !String(body.url).trim()) {
+      throw Object.assign(new Error('Missing url.'), { status: 400 });
+    }
+    const out = await fetchJobDescription(body.url);
+    console.log(`Fetched JD from ${out.url} (${out.source}, ${out.text.length} chars)`);
+    return out;
   },
 
   // Body: { jobDescription, source, filename } -> Claude's suggestions.
@@ -119,12 +148,39 @@ const routes = {
 
     console.log(`Analyzing ${filename}: ${doc.blocks.length} blocks, JD ${jobDescription.length} chars`);
     const t0 = Date.now();
-    const result = await analyze({ jobDescription, doc, source, filename, model: config.model });
-    console.log(`  -> ${result.suggestions.length} suggestions in ${((Date.now() - t0) / 1000).toFixed(1)}s` +
+    const result = await analyze({ jobDescription, doc, source, filename, config });
+    console.log(`  -> ${result.suggestions.length} rewords in ${((Date.now() - t0) / 1000).toFixed(1)}s` +
       (result.cost ? ` ($${result.cost.toFixed(4)})` : ''));
     if (result.rejected.length) console.log(`  -> dropped ${result.rejected.length} malformed:`, result.rejected);
 
-    return { ...result, blocks: doc.blocks };
+    // Which blocks appear, and in what order, is decided here rather than by
+    // the model: it ranks, the page budget selects. Without this a long master
+    // resume comes out master-sized, because the model only ever has opinions
+    // about the handful of blocks it chose to mention.
+    const ranked = Object.keys(result.ranking).length;
+    const plan = selectToFit(doc, result.ranking, {
+      source,
+      sty: body.styles || '',
+      budgetPt: config.pageBudgetPt || undefined,
+      charWidthRatio: config.charWidthRatio,
+    });
+    const structural = planToSuggestions(doc, plan);
+
+    console.log(`  -> ranked ${ranked}/${doc.blocks.length} blocks; keeping ${plan.show.length}, `
+      + `dropping ${plan.hide.length} (${plan.estimate.usedIn}in of ${plan.estimate.budgetIn}in)`);
+    if (ranked < doc.blocks.length) {
+      console.log(`  -> ${doc.blocks.length - ranked} block(s) unranked; treated as irrelevant`);
+    }
+
+    return {
+      ...result,
+      // Rewords stay reviewable one at a time; structural edits are applied.
+      suggestions: result.suggestions,
+      structural,
+      plan,
+      unranked: doc.blocks.length - ranked,
+      blocks: doc.blocks,
+    };
   },
 
   // Body: { source, suggestions } -> edited text plus a per-suggestion report.
@@ -192,7 +248,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(config.port, '127.0.0.1', () => {
   console.log(`\n  Resume optimizer listening on http://127.0.0.1:${config.port}`);
   console.log(`  Archive:  ${config.archiveDir}`);
-  console.log(`  Model:    ${config.model || '(CLI default)'}`);
+  console.log(`  Engine:   ${providers.describe(config)}`);
   console.log(`  Pairing:  open for ${config.pairWindowMinutes} min — click "Connect" in the extension now.\n`);
 });
 

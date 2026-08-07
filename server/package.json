@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test test/parse.test.js test/balance.test.js"
+    "test": "node --test test/parse.test.js test/balance.test.js test/layout.test.js test/select.test.js test/pick.test.js"
   },
   "engines": {
     "node": ">=18"

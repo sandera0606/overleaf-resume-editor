@@ -17,13 +17,13 @@
   "content_scripts": [
     {
       "matches": ["https://*.overleaf.com/project/*"],
-      "js": ["content.js"],
+      "js": ["overleaf.js", "content.js"],
       "css": ["sidebar.css"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://*.overleaf.com/project/*"],
-      "js": ["cm-bridge.js"],
+      "js": ["page-bridge.js", "cm-review.js"],
       "world": "MAIN",
       "run_at": "document_idle"
     }
