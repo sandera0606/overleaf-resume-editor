@@ -45,8 +45,13 @@ test('higher-ranked blocks are chosen over lower-ranked ones', () => {
   const top = doc.blocks[doc.blocks.length - 1].id; // deliberately the last one
   const ranking = Object.fromEntries(doc.blocks.map((b) => [b.id, b.id === top ? 100 : 1]));
 
-  // A budget tight enough that not everything can survive.
-  const res = selectToFit(doc, ranking, { source: FIXTURE, budgetPt: 260 });
+  // Derive a tight budget from what the content actually costs, rather than
+  // hard-coding points: a fixed number silently stops being tight the moment
+  // the estimator is recalibrated, and the test passes while asserting nothing.
+  const full = selectToFit(doc, ranking, { source: FIXTURE, budgetPt: 100000 });
+  const tight = full.estimate.overheadPt + (full.estimate.usedPt - full.estimate.overheadPt) * 0.5;
+
+  const res = selectToFit(doc, ranking, { source: FIXTURE, budgetPt: tight });
   assert.ok(res.show.includes(top), 'the highest-ranked block must survive a tight budget');
   assert.ok(res.hide.length > 0, 'a tight budget must drop something');
 });
