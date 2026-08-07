@@ -201,3 +201,68 @@ test('blocks inside a fully commented-out section are not addressable', () => {
   assert.ok(!doc.blocks.some((b) => /scholarship/i.test(b.text)),
     'if this now passes, the parser gained commented-section support — update the README');
 });
+
+test('applying the plan actually produces a document that fits', () => {
+  // The end-to-end property. Everything else checks the *plan*; this checks
+  // that executing it yields a one-page document. Its absence let two separate
+  // measurement bugs ship: the plan looked right while the output was 3 pages.
+  const { applySuggestions } = require('../src/edits');
+  const { estimate } = require('../src/layout');
+  const { planToSuggestions } = require('../src/select');
+
+  // Lengthen the fixture by cloning a real, parseable block.
+  const base = parse(FIXTURE);
+  const proj = base.blocks.find((b) => b.section === 'Projects');
+  const lines = FIXTURE.split('\n');
+  const blockText = lines.slice(proj.startLine - 1, proj.endLine).join('\n');
+  const clones = Array.from({ length: 30 }, (_, i) =>
+    blockText.replace(/\textbf\{[^}]*\}/, `\textbf{Cloned Project ${i + 1}}`));
+  const long = [...lines.slice(0, proj.endLine), ...clones, ...lines.slice(proj.endLine)].join('\n');
+
+  const doc = parse(long);
+  assert.ok(doc.blocks.length > 20, `expected a long document, got ${doc.blocks.length} blocks`);
+  assert.ok(estimate(long).pages > 1, 'the test document must start out too long to be meaningful');
+
+  const ranking = Object.fromEntries(doc.blocks.map((b, i) => [b.id, 100 - i]));
+  const plan = selectToFit(doc, ranking, { source: long });
+  assert.ok(plan.hide.length > 0, 'a too-long document must drop something');
+
+  const { text, results } = applySuggestions(long, planToSuggestions(doc, plan));
+  const failed = results.filter((r) => r.status === 'failed');
+  assert.strictEqual(failed.length, 0, `suggestions failed to apply: ${JSON.stringify(failed.slice(0, 3))}`);
+
+  const after = estimate(text);
+  assert.strictEqual(after.pages, 1, `applying the plan left ${after.pages} pages (${after.estimatedIn}in)`);
+});
+
+test('a heading whose text sits on a continuation line still has height', () => {
+  // These templates write the macro and its arguments on separate lines.
+  // Measuring only macro-bearing lines charged headings nothing, so a
+  // multi-page resume estimated under one page and was never trimmed.
+  const { measure, readGeometry } = require('../src/layout');
+  const src = [
+    '\begin{document}',
+    '\resumeProjectHeading',
+    '  {\textbf{Kafka Event Pipeline} $|$ \emph{Kafka, Go, Postgres}}{2023}',
+    '\end{document}',
+  ].join('\n');
+  const h = measure(src, readGeometry(src)).height;
+  assert.ok(h > 5, `a rendered heading must have height, got ${h}pt`);
+});
+
+test('the preamble is not measured as body text', () => {
+  const { measure, readGeometry } = require('../src/layout');
+  const body = '\\begin{document}\n\\section{Experience}\n\\end{document}';
+  const withPreamble = [
+    '\\documentclass[letterpaper,11pt]{article}',
+    '\\usepackage{styles/resume-style}',
+    '\\usepackage[english]{babel}',
+    body,
+  ].join('\n');
+  const geo = readGeometry(withPreamble);
+  assert.strictEqual(
+    Math.round(measure(withPreamble, geo).height),
+    Math.round(measure(body, geo).height),
+    'preamble lines must contribute no height',
+  );
+});

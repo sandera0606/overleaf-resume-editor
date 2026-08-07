@@ -184,8 +184,15 @@ function measure(tex, geo, opts = {}) {
   let height = 0;
   const sections = [];
   let current = null;
+  // Continuation lines carry no macro, so item context has to be remembered.
+  let isItemContext = false;
 
-  for (const raw of tex.split('\n')) {
+  // Nothing before \begin{document} is typeset. Without this, \documentclass
+  // and \usepackage lines are measured as if they were prose.
+  const bodyStart = tex.indexOf('\\begin{document}');
+  const body = bodyStart === -1 ? tex : tex.slice(bodyStart + '\\begin{document}'.length);
+
+  for (const raw of body.split('\n')) {
     const line = raw.trim();
     if (!line || line.startsWith('%')) continue; // commented-out = not typeset
 
@@ -199,27 +206,25 @@ function measure(tex, geo, opts = {}) {
     }
 
     const macro = (line.match(/\\(resume[A-Za-z]*)/) || [])[1];
-    const isHeading = /\\resume(SubHeading|Subheading|ProjectHeading|SubItem)/.test(line);
-    const isItem = /\\resumeItem\b/.test(line);
+    // Any macro's declared spacing applies, whether or not the line carries text.
+    let block = macro ? (spacing[macro] || 0) : 0;
 
-    if (!isHeading && !isItem) {
-      // Structural macros contribute only their own spacing (often negative).
-      if (macro) height += spacing[macro] || 0;
-      continue;
-    }
-
+    // Measure every line that renders text, not just ones with a known macro.
+    // These templates put a heading's arguments on continuation lines:
+    //
+    //     \resumeProjectHeading                 <- macro, no visible text
+    //       {\textbf{Kafka Pipeline}}{2023}     <- the text that actually renders
+    //
+    // Counting only macro lines charged headings ~nothing, which let a
+    // multi-page resume estimate under one page and pass through untrimmed.
     const text = visibleText(line);
-    const width = isItem ? textWidth - itemIndent * 2 : textWidth - itemIndent;
-    const size = isItem ? fontSize * SMALL_RATIO : fontSize;
-    const lines = wrappedLines(text, width, size, charRatio);
-
-    // Only the four-argument headings render a second row (title/date, then
-    // org/location). \resumeProjectHeading and \resumeSubItem are single-row —
-    // charging every heading for two rows overestimated a project-heavy resume
-    // by about three inches.
-    const twoRow = /\\resume(SubHeading|Subheading|SubSubheading)\b/.test(line);
-    const rows = lines + (twoRow ? 1 : 0);
-    const block = rows * baseline * (isItem ? SMALL_RATIO : 1) + (spacing[macro] || 0);
+    if (text) {
+      // \resumeItem bodies are set in \small and indented one level deeper.
+      const small = isItemContext || /\\resumeItem\b/.test(line);
+      const width = textWidth - itemIndent * (small ? 2 : 1);
+      const size = small ? fontSize * SMALL_RATIO : fontSize;
+      block += wrappedLines(text, width, size, charRatio) * baseline * (small ? SMALL_RATIO : 1);
+    }
 
     height += block;
     if (current) current.height += block;
