@@ -288,9 +288,6 @@
           text: `${info?.blocks || 0} blocks · never modified${byConvention ? '' : ` · ${PICK_REASON[state.pickReason]}`}`,
         }),
       ]),
-      !byConvention && state.selected
-        ? el('div', { class: 'ro-callout', text: `Rename it to ${MASTER} to have it picked automatically. Any .tex works — generated files in ${VERSIONS}/ are excluded.` })
-        : null,
       candidates.length > 1 ? picker : null,
     ]);
   }
