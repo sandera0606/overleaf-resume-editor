@@ -34,12 +34,11 @@
   const TAG_CONTENT = 'resume-optimizer-content';
   let bridgeSeq = 0;
   const pending = new Map();
-  let onScrolled = null;
 
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.data?.tag !== TAG_PAGE) return;
     const { id, payload, type } = event.data;
-    if (type === 'SCROLLED') return onScrolled?.();
+    if (type === 'SCROLLED') return; // no overlay to reposition
     const resolve = pending.get(id);
     if (resolve) {
       pending.delete(id);
@@ -176,42 +175,10 @@
       .replace(/^-+|-+$/g, '').slice(0, 60);
   }
 
-  // ---------------------------------------------------- floating toolbar --
-
-  const toolbar = el('div', { class: 'ro-float', id: 'resume-optimizer-float' });
-  document.documentElement.appendChild(toolbar);
-
-  function hideToolbar() { toolbar.classList.remove('ro-float-on'); }
-
-  function showToolbarAt(coords, sugg) {
-    if (!coords) return hideToolbar();
-    toolbar.textContent = '';
-    toolbar.appendChild(el('div', { class: 'ro-float-new', text: sugg.replacement }));
-    toolbar.appendChild(el('div', { class: 'ro-float-bar' }, [
-      el('button', { class: 'ro-float-nav', text: '‹', title: 'Previous', onclick: () => step(-1) }),
-      el('span', { class: 'ro-float-count', text: `${state.cursor + 1} / ${state.rewords.length}` }),
-      el('button', { class: 'ro-float-nav', text: '›', title: 'Next', onclick: () => step(1) }),
-      el('button', { class: 'ro-float-btn ro-float-no', text: '✕ skip', onclick: () => decide('rejected') }),
-      el('button', { class: 'ro-float-btn ro-float-yes', text: '✓ accept', onclick: () => decide('accepted') }),
-    ]));
-
-    // Anchor above the line, clamped into the viewport.
-    const top = Math.max(8, coords.top - 78);
-    const left = Math.min(Math.max(8, coords.left - 8), window.innerWidth - 380);
-    toolbar.style.top = `${top}px`;
-    toolbar.style.left = `${left}px`;
-    toolbar.classList.add('ro-float-on');
-  }
-
-  onScrolled = () => {
-    if (state.phase !== 'review') return;
-    const sugg = state.rewords[state.cursor];
-    if (!sugg || sugg.status !== 'pending') return;
-    bridge('COORDS').then((res) => {
-      if (res.ok && res.coords) showToolbarAt(res.coords, sugg);
-      else hideToolbar();
-    });
-  };
+  // The highlight lives in the editor; the decision lives in the panel.
+  // An overlay pinned to the text competed with Overleaf's own UI and moved
+  // under the cursor as the document reflowed, so accept/skip stays in one
+  // predictable place instead.
 
   // ------------------------------------------------------------ zip loading --
 
@@ -487,22 +454,18 @@
 
   async function showCurrent() {
     const sugg = state.rewords[state.cursor];
-    if (!sugg) return hideToolbar();
+    if (!sugg) return;
     render();
-    if (!state.inlineOk) return hideToolbar();
+    if (!state.inlineOk) return;
 
     const res = await bridge('SHOW', {
       anchor: sugg.anchor, occurrence: sugg.occurrence, done: sugg.status === 'accepted',
     });
     if (!res.ok) {
       sugg.status = 'missing';
-      hideToolbar();
       render();
       return;
     }
-    // Already-decided suggestions are shown for context, not re-decided.
-    if (sugg.status === 'pending') showToolbarAt(res.coords, sugg);
-    else hideToolbar();
   }
 
   async function decide(status) {
@@ -537,7 +500,6 @@
 
   async function finish() {
     state.phase = 'done';
-    hideToolbar();
     await bridge('CLEAR');
 
     // Archive the file as it now stands, accepted rewords included.
@@ -702,17 +664,33 @@
 
   root.appendChild(el('div', { class: 'ro-header' }, [
     el('span', { class: 'ro-title', text: 'Resume Optimizer' }),
-    el('button', { class: 'ro-close', text: '×', onclick: () => { toggle(false); hideToolbar(); } }),
+    el('button', { class: 'ro-close', text: '×', onclick: () => toggle(false) }),
   ]));
   root.appendChild(statusBar);
   root.appendChild(progress);
   root.appendChild(body);
+
+  // rel="noopener noreferrer" so the opened tab gets no handle back on this one.
+  const LINKS = [
+    ['GitHub', 'https://github.com/sandera0606'],
+    ['Website', 'https://shuang.vercel.app/'],
+    ['LinkedIn', 'https://www.linkedin.com/in/shuang0616/'],
+    ['X', 'https://x.com/_shuang0616'],
+  ];
+  root.appendChild(el('div', { class: 'ro-footer' },
+    LINKS.map(([label, href]) => el('a', {
+      class: 'ro-footer-link',
+      href,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      text: label,
+    })),
+  ));
   document.documentElement.appendChild(root);
 
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (msg?.action === 'toggleSidebar') {
       toggle();
-      if (!root.classList.contains('ro-open')) hideToolbar();
       sendResponse({ ok: true });
     }
     return false;

@@ -399,76 +399,6 @@
 #resume-optimizer .ro-decide-no { background: transparent; }
 #resume-optimizer .ro-decide .ro-btn:disabled { opacity: 0.4; cursor: default; }
 
-/* ------------------------------- floating accept/reject over the editor -- */
-/* Lives outside the panel, so it carries its own colours. */
-
-#resume-optimizer-float {
-  position: fixed;
-  z-index: 2147483001;
-  display: none;
-  max-width: 360px;
-  padding: 8px 10px;
-  border-radius: 7px;
-  border: 1px solid #f59e0b;
-  background: #fffbeb;
-  color: #1c2024;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 12.5px;
-  line-height: 1.4;
-}
-#resume-optimizer-float.ro-float-on { display: block; }
-
-#resume-optimizer-float .ro-float-new {
-  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-  font-size: 11.5px;
-  background: #e7f4ec;
-  border-radius: 3px;
-  padding: 5px 7px;
-  margin-bottom: 7px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  max-height: 96px;
-  overflow-y: auto;
-}
-
-#resume-optimizer-float .ro-float-bar { display: flex; align-items: center; gap: 6px; }
-#resume-optimizer-float .ro-float-count { font-size: 11px; color: #78716c; min-width: 40px; text-align: center; }
-
-#resume-optimizer-float .ro-float-nav {
-  border: 1px solid #d6d3d1;
-  background: #fff;
-  color: #57534e;
-  border-radius: 4px;
-  width: 22px;
-  height: 22px;
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-}
-#resume-optimizer-float .ro-float-nav:last-of-type { margin-right: auto; }
-#resume-optimizer-float .ro-float-nav:hover { border-color: #f59e0b; color: #b45309; }
-
-#resume-optimizer-float .ro-float-btn {
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-#resume-optimizer-float .ro-float-yes { background: #2f6f4e; color: #fff; }
-#resume-optimizer-float .ro-float-no { background: #fff; color: #57534e; border-color: #d6d3d1; }
-#resume-optimizer-float .ro-float-btn:hover { filter: brightness(1.08); }
-
-@media (prefers-color-scheme: dark) {
-  #resume-optimizer-float { background: #2a2519; border-color: #b45309; color: #e8eaed; }
-  #resume-optimizer-float .ro-float-new { background: #17301f; }
-  #resume-optimizer-float .ro-float-count { color: #a8a29e; }
-  #resume-optimizer-float .ro-float-no { background: #1b1d1f; color: #d6d3d1; border-color: #44403c; }
-}
-
 #resume-optimizer .ro-failed {
   background: var(--ro-del);
   border: 1px solid var(--ro-err);
@@ -501,3 +431,24 @@
   border-radius: 3px;
 }
 #resume-optimizer .ro-fit-note { font-style: italic; opacity: 0.8; }
+
+/* --------------------------------------------------------------- footer -- */
+
+#resume-optimizer .ro-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--ro-line);
+  font-size: 11.5px;
+}
+
+#resume-optimizer .ro-footer-link {
+  color: var(--ro-muted);
+  text-decoration: none;
+}
+#resume-optimizer .ro-footer-link:hover {
+  color: var(--ro-accent);
+  text-decoration: underline;
+}
